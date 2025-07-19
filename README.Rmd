@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# A Unified Event Detection Dataset (UniTED) powered by DAL
+# UniTED: A Unified Time Series Event Detection Repository powered by DAL
 
 <!-- badges: start -->
 ![GitHub Repo stars](https://github.com/cefet-rj-dal/united)
