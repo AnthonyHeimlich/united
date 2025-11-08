@@ -1,6 +1,5 @@
 #########################################################
-## Dataset UCI 3W - undesirable real events in oil wells
-## ETL to use it in time series event detection
+## UCI 3W - Build parquet-based groups (Types 3, 4, 9)
 #########################################################
 
 series_description <- c("Type_3",
@@ -10,7 +9,7 @@ series_description <- c("Type_3",
 series_path <- c("3","4","9")
 
 
-# Create the complete dataset organized as a list -------------------------
+# Create the complete dataset organized as a list
 
 create_dataset <- function(group = c("3","4","9"), nm = NA) {
   require(stringr)
@@ -25,7 +24,7 @@ create_dataset <- function(group = c("3","4","9"), nm = NA) {
 
   #Iteration on series groups
   for (k in 1:length(series_path)) {
-    # Group - Series -----------------------------------------------------
+    # Group - Series
     #files_sr <- list.files(path = series_path[k], pattern = "*.RData")
     files_sr <- list.files(path = paste(ungp_path, series_path[k], sep = ""), pattern = "*.parquet")
 
@@ -37,8 +36,7 @@ create_dataset <- function(group = c("3","4","9"), nm = NA) {
     for (i in 1:length(files_sr)) {
       series_file <- paste(ungp_path, series_path[k], "/", files_sr[i], sep = "")
 
-      #series <- read_csv(series_file)
-      #load(series_file)
+      # Read parquet series
       series <- read_parquet(series_file)
       group[[i]] <- series
 
@@ -51,23 +49,14 @@ create_dataset <- function(group = c("3","4","9"), nm = NA) {
   #Each group is named after the original documentation
   names(dataset) <- nm
 
-  # Return complete dataset -------------------------------------------------
+  # Return complete dataset
   return(dataset)
 }
 
 
-# Use example -------------------------------------------------------------
-#Series by group
-j=1
-out_file <- paste("data/grouped/oil_3w_", series_description[j], ".RData", sep = "")
-print(out_file)
-
-
-oil_3w_Type_3 <- create_dataset(group = series_path[j], nm = series_description[j])
-save(oil_3w_Type_3, file = out_file, compress = TRUE)
-
-oil_3w_Type_4 <- create_dataset(group = series_path[j], nm = series_description[j])
-save(oil_3w_Type_4, file = out_file, compress = TRUE)
-
-oil_3w_Type_9 <- create_dataset(group = series_path[j], nm = series_description[j])
-save(oil_3w_Type_9, file = out_file, compress = TRUE)
+# Persist grouped artifacts for each parquet-based type
+for (j in seq_along(series_path)) {
+  out_file <- paste("data/grouped/oil_3w_", series_description[j], ".RData", sep = "")
+  grp <- create_dataset(group = series_path[j], nm = series_description[j])
+  save(grp, file = out_file, compress = TRUE)
+}
