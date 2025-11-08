@@ -9,27 +9,37 @@
 <!-- badges: end -->
 
 The Unified Event Detection Dataset (UniTED), powered by DAL, is a
-curated repository of datasets for the development and evaluation of
-time series event detection methods. It primarily includes labeled
-datasets, enabling consistent benchmarking and performance assessment
-across experiments. While the datasets can be accessed via raw files, it
-is recommended to use them through this R package, following the usage
-guidelines provided in the next section.
+curated repository of time series datasets for the development and
+evaluation of event and anomaly detection methods. It primarily includes
+labeled datasets to enable consistent benchmarking and reproducible
+experiments.
+
+This repository contains: - The R package that exposes dataset objects
+(see `?data` topics and `man/`) - The data files shipped for package use
+(`data/*.RData`) - The ETL pipelines used to build those data files
+(`etl/`), separated into: - `source/`: original or labeled inputs used
+by ETL - `intermediate/`: zipped files and grouped lists produced during
+processing - final artifacts are saved under the repo root `data/`
+
+We recommend accessing datasets via this package to ensure standardized
+structures and metadata.
 
 ------------------------------------------------------------------------
 
 ## Dataset Description
 
-Full dataset description is available at:
-<https://github.com/cefet-rj-dal/united/wiki>
+- Full dataset descriptions:
+  <https://github.com/cefet-rj-dal/united/wiki>
+- Example notebooks: `Rmd/examples` and rendered versions in `examples/`
+- ETL documentation: one README per dataset under
+  `etl/<dataset>/README.md`
 
 ------------------------------------------------------------------------
 
 ## Examples
 
-Usage: <https://github.com/cefet-rj-dal/united/tree/main/examples/>
-
-The examples are organized according to available datasets.
+Usage examples are organized by dataset:
+<https://github.com/cefet-rj-dal/united/tree/main/examples/>
 
 ``` r
 library(united)
@@ -59,3 +69,33 @@ options(timeout=timeout)
 ## Bugs and new features request
 
 <https://github.com/cefet-rj-dal/united/issues>
+
+------------------------------------------------------------------------
+
+## ETL Generation
+
+The `etl/` folder hosts dataset‑specific ETL pipelines that produce the
+final RData files included in the package. Each dataset folder (e.g.,
+`etl/numenta`, `etl/ucr_anomaly`, `etl/yahoo`, `etl/3W`, `etl/mit-bih`,
+`etl/gecco`) contains:
+
+- `source/`: the labeled inputs used by builder scripts
+- `intermediate/`: zipped/raw conversions and grouped list artifacts
+- builder scripts: numbered `*.R` files that specify the ETL order and
+  outputs
+- a README with origin links, field descriptions, and script references
+
+Final artifacts are placed in the root `data/` directory and documented
+in `R/data.R`. To reproduce data, run the numbered scripts inside
+`etl/<dataset>/`.
+
+------------------------------------------------------------------------
+
+## References
+
+- Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A
+  survey. ACM Computing Surveys, 41(3), 1–58.
+- Truong, C., Oudre, L., & Vayatis, N. (2020). Selective review of
+  change point detection methods. Signal Processing, 167, 107299.
+- Lavin, A., & Ahmad, S. (2015). Evaluating real-time anomaly detection
+  algorithms — the Numenta Anomaly Benchmark. 2015 IEEE 14th ICMLA.
