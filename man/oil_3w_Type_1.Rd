@@ -27,7 +27,7 @@ Labels available? Yes
 \examples{
 data(oil_3w_Type_1)
 s <- oil_3w_Type_1[[1]]
-plot(ts(s$value), main = names(oil_3w_Type_1)[1], ylab = "value")
+plot(ts(s$p_tpt), main = names(oil_3w_Type_1)[1], ylab = "value")
 }
 \references{
 3W dataset (UCI repository). See also: Truong, C., Oudre, L., & Vayatis, N. (2020).
