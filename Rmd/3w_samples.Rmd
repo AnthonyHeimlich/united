@@ -103,8 +103,7 @@ print(ev_soft$confMatrix)
 ```{r}
 ev_soft$accuracy
 ev_soft$F1
+```
 
 ## References
-
 - Truong, C., Oudre, L., & Vayatis, N. (2020). Selective review of change point detection methods. Signal Processing, 167, 107299.
-```

@@ -1,16 +1,24 @@
 ---
-title: "Gecco Challenge Dataset - Water Quality"
+title: "GECCO Challenge — Water Quality"
 output: html_notebook
 ---
-Data collection for water quality monitoring
 
-* Multivariate series with labeled anomalies.
-* Recommended use: multivariate or univariate event detection
+Overview
 
-Source: https://www.spotseven.de/gecco/gecco-challenge
+This notebook uses the GECCO water quality challenge data to illustrate anomaly
+detection in multivariate environmental time series. We will:
 
+- Load the dataset and visualize the multivariate stream
+- Select a univariate sensor for a focused experiment
+- Train a baseline detector and evaluate results
 
-## Load series
+Dataset notes
+- Multivariate series with labeled anomalies
+- Recommended use: multivariate or univariate event detection
+- Source: https://www.spotseven.de/gecco/gecco-challenge
+
+## Load packages and dataset
+Load the required packages for data access, modeling, visualization, and evaluation.
 
 ``` r
 library(united)
@@ -21,59 +29,53 @@ library(harbinger)
 ``` r
 ## Load series ----------------------
 data(gecco)
-#Plot multivariate series
-plot(as.ts(gecco$multi[,2:10]))
+# Plot selected multivariate columns
+plot(as.ts(gecco$multi[, 2:10]))
 ```
 
 ![plot of chunk unnamed-chunk-2](fig/gecco_samples/unnamed-chunk-2-1.png)
 
-Gecco recommended sample: One day with anomalies
+GECCO recommended sample: one day with anomalies
 
 
 ``` r
 ## Univariate series selection ----------------------
 series <- gecco$ph
 
-#Gecco recommended sample: One day with anomalies
-series <- series[16500:18000,]
+# Subset to a recommended one-day window with anomalies
+series <- series[16500:18000, ]
 plot(as.ts(series$value))
 ```
 
 ![plot of chunk unnamed-chunk-3](fig/gecco_samples/unnamed-chunk-3-1.png)
 
-
-
 ## Event detection experiment
-
-Detection steps
+Define a baseline detector and generate anomaly predictions.
 
 ``` r
-#Establishing arima method
+# Establish ARIMA-based detector
 model <- hanr_arima()
 ```
 
 
-
 ``` r
-#Fitting the model
+# Fit the model on the value series
 model <- fit(model, series$value)
 ```
 
 
-
 ``` r
-#Making detections
+# Produce anomaly detections
 detection <- detect(model, series$value)
 ```
 
-
 ## Results analysis
-
+Inspect positives, plot overlays, and compute metrics.
 
 
 ``` r
-#Filtering detected events
-print(detection |> dplyr::filter(event==TRUE))
+# Show detected positives
+print(detection |> dplyr::filter(event == TRUE))
 ```
 
 ```
@@ -91,7 +93,7 @@ print(detection |> dplyr::filter(event==TRUE))
 Visual analysis
 
 ``` r
-#Ploting the results
+# Plot predictions (blue) versus true labels (red bands)
 grf <- har_plot(model, series$value, detection, series$event)
 plot(grf)
 ```
@@ -101,7 +103,7 @@ plot(grf)
 Evaluate metrics
 
 ``` r
-#Evaluating the detection metrics
+# Point-wise evaluation (no temporal tolerance)
 ev <- evaluate(model, detection$event, series$event)
 print(ev$confMatrix)
 ```
@@ -112,3 +114,7 @@ print(ev$confMatrix)
 ## TRUE      4     4    
 ## FALSE     68    1425
 ```
+
+## References
+
+- Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.

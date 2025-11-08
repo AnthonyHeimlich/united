@@ -1,17 +1,25 @@
 ---
-title: "UCR Anomaly Archive - ECG Series"
+title: "UCR Anomaly Archive — ECG Series"
 output: html_notebook
 ---
-Real data from human medicine, biology, meteorology and industry
+Overview
 
-* Selection with ECG data series
-* Univariate series with labeled anomalies
-* Recommended use: univariate anomaly detection
+This notebook demonstrates a simple anomaly detection workflow using ECG series
+from the UCR Time Series Anomaly Archive. We will:
 
-Source: https://paperswithcode.com/dataset/ucr-anomaly-archive
+- Load the ECG dataset provided by the `united` package
+- Visualize a selected series and its labels
+- Train a baseline detector and generate anomaly predictions
+- Evaluate performance using standard and soft (tolerant) metrics
+
+Dataset notes
+- Univariate time series with labeled anomalous intervals
+- Recommended use: univariate anomaly detection
+- Source: https://paperswithcode.com/dataset/ucr-anomaly-archive
 
 
-## Load series
+## Load packages and dataset
+Load the required packages for data access, modeling, visualization, and evaluation.
 
 ``` r
 library(united)
@@ -21,7 +29,7 @@ library(harbinger)
 library(tspredit)
 ```
 
-Selecting a well as example
+Load the ECG dataset into memory using the package data helper.
 
 ``` r
 ## Load series ----------------------
@@ -31,8 +39,9 @@ data(ucr_ecg)
 
 
 ``` r
-#Selecting series
+# Select a representative series for the experiment
 series <- ucr_ecg[[3]]
+# Quick visualization of values over time
 plot(as.ts(series$value))
 ```
 
@@ -42,48 +51,48 @@ plot(as.ts(series$value))
 
 
 ## Event detection experiment
-
-Detection steps
+Define a detection method and train it with a subset of the series.
 
 ``` r
-#Establishing arima method
-#model <- hanr_arima()
-model <- han_autoencoder(3, 2, autoenc_ed, num_epochs = 1500)
+# Establish an autoencoder-based detector
+# Alternative: uncomment to try ARIMA
+# model <- hanr_arima()
+model <- han_autoencoder(3, 2, autoenc_ed, num_epochs = 100)
 ```
 
 
 
 ``` r
-#Fitting the model
-train <- series[1:5000,] #Using a train sample subset
+# Fit the model on a training window (subset for speed)
+train <- series[1:5000,]
 model <- fit(model, train$value)
 ```
 
 
 
 ``` r
-#Making detections
+# Produce anomaly detections for the whole series
 detection <- detect(model, series$value)
 ```
 
 
 ## Results analysis
-
+Inspect detections, visualize overlays, and compute metrics.
 
 ``` r
-#Filtering detected events
-print(detection |> dplyr::filter(event==TRUE))
+# Filter detected positives for quick inspection
+print(detection |> dplyr::filter(event == TRUE))
 ```
 
 ```
 ##     idx event    type
-## 1 17024  TRUE anomaly
+## 1 17025  TRUE anomaly
 ```
 
 Visual analysis
 
 ``` r
-#Ploting the results
+# Plot predictions (blue) versus true labels (red bands)
 grf <- har_plot(model, series$value, detection, series$event)
 plot(grf)
 ```
@@ -93,7 +102,7 @@ plot(grf)
 Evaluate metrics
 
 ``` r
-#Evaluating the detection metrics
+# Point-wise evaluation (no temporal tolerance)
 ev <- evaluate(model, detection$event, series$event)
 print(ev$confMatrix)
 ```
@@ -107,8 +116,8 @@ print(ev$confMatrix)
 
 
 ``` r
-#SoftEd Evaluation
-ev_soft <- evaluate(har_eval_soft(sw=200), detection$event, series$event)
+# Soft evaluation with temporal tolerance window (sw = 200)
+ev_soft <- evaluate(har_eval_soft(sw = 200), detection$event, series$event)
 print(ev_soft$confMatrix)
 ```
 
@@ -124,7 +133,7 @@ print(ev_soft$accuracy)
 ```
 
 ```
-## [1] 0.9999587
+## [1] 0.9999583
 ```
 
 ``` r
@@ -132,6 +141,10 @@ print(ev_soft$F1)
 ```
 
 ```
-## [1] 0.38
+## [1] 0.375
 ```
+
+## References
+
+- Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.
 

@@ -51,7 +51,7 @@ Define a detection method and train it with a subset of the series.
 # Establish an autoencoder-based detector
 # Alternative: uncomment to try ARIMA
 # model <- hanr_arima()
-model <- han_autoencoder(3, 2, autoenc_ed, num_epochs = 1500)
+model <- han_autoencoder(3, 2, autoenc_ed, num_epochs = 100)
 ```
 
 

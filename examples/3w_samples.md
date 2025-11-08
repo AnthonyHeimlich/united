@@ -1,16 +1,22 @@
 ---
-title: "3W Dataset - Oil wells"
+title: "3W Dataset — Oil Wells"
 output: html_notebook
 ---
-The first realistic and public dataset with rare undesirable real events in oil wells.
+Overview
 
-* Multivariate series with labeled change points
-* Recommended use: multivariate or univariate CPD detection
+The 3W dataset contains the first realistic and public collection of rare,
+undesirable real events in oil well drilling. This notebook demonstrates change
+point detection (CPD) on a univariate sensor extracted from a multivariate well
+series.
 
-Source: https://archive.ics.uci.edu/ml/datasets/3W+dataset
+Dataset notes
+- Multivariate series with labeled change points (CPs)
+- Recommended use: multivariate or univariate CPD detection
+- Source: https://archive.ics.uci.edu/ml/datasets/3W+dataset
 
 
-## Load series
+## Load packages and dataset
+Load the required packages for data access, modeling, visualization, and evaluation.
 
 ``` r
 library(united)
@@ -18,7 +24,7 @@ library(daltoolbox)
 library(harbinger)
 ```
 
-Selecting a well as example
+Select a well as example and extract a series.
 
 
 ``` r
@@ -29,7 +35,7 @@ data(oil_3w_Type_1)
 
 
 ``` r
-#Selecting
+# Select first well from the Type 1 group
 data <- oil_3w_Type_1[[1]]
 ```
 
@@ -39,6 +45,7 @@ Select the desired variable directly from preprocessed data.
 
 
 ``` r
+# Choose a sensor (e.g., P_TPT) and plot
 series <- data$p_tpt
 plot(as.ts(series))
 ```
@@ -46,42 +53,39 @@ plot(as.ts(series))
 ![plot of chunk unnamed-chunk-4](fig/3w_samples/unnamed-chunk-4-1.png)
 
 ## Event detection experiment
-
-
-Detection steps
+Define a CPD method and generate detections.
 
 ``` r
-#Establishing arima method
+# Establish binary segmentation CPD model
 model <- hcp_binseg()
 ```
 
 
 
 ``` r
-#Fitting the model
+# Fit the CPD model
 model <- fit(model, series)
 ```
 
 
 
 ``` r
-#Making detections
+# Produce change-point detections
 detection <- detect(model, series)
 ```
 
 ```
-## Warning in BINSEG(sumstat, pen = pen.value, cost_func = costfunc, minseglen = minseglen, : The number of changepoints identified is
-## Q, it is advised to increase Q to make sure changepoints have not been missed.
+## Warning in BINSEG(sumstat, pen = pen.value, cost_func = costfunc, minseglen = minseglen, : The number of changepoints
+## identified is Q, it is advised to increase Q to make sure changepoints have not been missed.
 ```
 
 
 ## Results analysis
-
-
+Inspect detected CPs, visualize overlays, and compute metrics.
 
 ``` r
-#Filtering detected events
-print(detection |> dplyr::filter(event==TRUE))
+# Show detected change points
+print(detection |> dplyr::filter(event == TRUE))
 ```
 
 ```
@@ -93,7 +97,7 @@ print(detection |> dplyr::filter(event==TRUE))
 Visual analysis
 
 ``` r
-#Ploting the results
+# Plot detections (blue) vs. labels (red bands)
 grf <- har_plot(model, series, detection, data$event)
 plot(grf)
 ```
@@ -103,7 +107,7 @@ plot(grf)
 Evaluate metrics
 
 ``` r
-#Evaluating the detection metrics
+# Point-wise evaluation (no tolerance)
 ev <- evaluate(model, detection$event, data$event)
 print(ev$confMatrix)
 ```
@@ -137,7 +141,7 @@ To analyze the results considering temporal tolerance, softED smoothed metrics c
 
 
 ``` r
-ev_soft <- evaluate(har_eval_soft(sw=90), detection$event, data$event)
+ev_soft <- evaluate(har_eval_soft(sw = 90), detection$event, data$event)
 print(ev_soft$confMatrix)
 ```
 
@@ -164,3 +168,6 @@ ev_soft$F1
 ```
 ## [1] 0.3722222
 ```
+
+## References
+- Truong, C., Oudre, L., & Vayatis, N. (2020). Selective review of change point detection methods. Signal Processing, 167, 107299.

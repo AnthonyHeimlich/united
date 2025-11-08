@@ -1,16 +1,21 @@
 ---
-title: "Numenta Anomaly Benchmark (NAB)  Dataset - Cloud services and synthetic data"
+title: "Numenta Anomaly Benchmark (NAB) — Cloud Services and Synthetic Data"
 output: html_notebook
 ---
 
-NAB is a novel benchmark for evaluating algorithms for anomaly detection in streaming, real-time applications.
+Overview
 
-* Univariate series with labeled anomalies
-* Recommended use: univariate event detection
+This notebook demonstrates univariate anomaly detection using series from the
+Numenta Anomaly Benchmark (NAB). We will load a synthetic series, train a simple
+detector, visualize predictions, and compute metrics.
 
-Source: https://www.numenta.com/
+Dataset notes
+- Univariate series with labeled anomalies
+- Recommended use: univariate event detection
+- Source: https://www.numenta.com/
 
-## Load series
+## Load packages and dataset
+Load the required packages for data access, modeling, visualization, and evaluation.
 
 ``` r
 library(united)
@@ -19,53 +24,51 @@ library(harbinger)
 ```
 
 
-Univerariate use - Example 1:
+Univariate use — Example 1
 
 ``` r
 ## Load series ----------------------
 data(nab_artificialWithAnomaly)
 
-#Univerariate use
+# Select the first series from the collection
 data <- nab_artificialWithAnomaly[[1]]
 
-plot(as.ts(data[,2:3]),
-     main=names(nab_artificialWithAnomaly[1]))
+# Visualize value and label columns
+plot(as.ts(data[, 2:3]),
+     main = names(nab_artificialWithAnomaly[1]))
 ```
 
 ![plot of chunk unnamed-chunk-2](fig/nab_samples/unnamed-chunk-2-1.png)
 
 ## Event detection experiment
-
-
-
-Detection steps
+Define a baseline detector and generate anomaly predictions.
 
 ``` r
-#Establishing arima method
+# Establish ARIMA-based detector
 model <- hanr_arima()
 ```
 
 
 
 ``` r
-#Fitting the model
+# Fit the model on the value series
 model <- fit(model, data$value)
 ```
 
 
 
 ``` r
-#Making detections
+# Produce anomaly detections
 detection <- detect(model, data$value)
 ```
 
 
 ## Results analysis
-
+Inspect detected positives, plot overlays, and compute metrics.
 
 ``` r
-#Filtering detected events
-print(detection |> dplyr::filter(event==TRUE))
+# Show detected positives only
+print(detection |> dplyr::filter(event == TRUE))
 ```
 
 ```
@@ -103,7 +106,7 @@ print(detection |> dplyr::filter(event==TRUE))
 Visual analysis
 
 ``` r
-#Ploting the results
+# Plot predictions (blue) over true labels (red bands)
 grf <- har_plot(model, data$value, detection, data$event)
 plot(grf)
 ```
@@ -113,7 +116,7 @@ plot(grf)
 Evaluate metrics
 
 ``` r
-#Evaluating the detection metrics
+# Point-wise evaluation (no temporal tolerance)
 ev <- evaluate(model, detection$event, data$event)
 print(ev$confMatrix)
 ```
@@ -124,3 +127,7 @@ print(ev$confMatrix)
 ## TRUE      1     27   
 ## FALSE     0     4004
 ```
+
+## References
+
+- Lavin, A., & Ahmad, S. (2015). Evaluating real-time anomaly detection algorithms — the Numenta Anomaly Benchmark. 2015 IEEE 14th International Conference on Machine Learning and Applications (ICMLA).
