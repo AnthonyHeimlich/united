@@ -3,7 +3,7 @@
 \docType{data}
 \name{nab_realTweets}
 \alias{nab_realTweets}
-\title{Numenta Anomaly Benchmark (NAB) realTraffic}
+\title{Numenta Anomaly Benchmark (NAB) realTweets}
 \format{
 A list of time series.
 }
@@ -14,22 +14,21 @@ A list of time series.
 data(nab_realTweets)
 }
 \description{
-Data collection with real-world time-series.
-Real data from Tweets with anomalies
-As part of the Numenta Anomaly Benchmark (NAB), this dataset contains
-time series with real and synthetic data. The real data comes from network
-monitoring and cloud computing. On the other hand, synthetic data simulate
-series with or without anomalies.
+Real-world time series with labeled anomalies from Twitter
+volumes (NAB). Labels available: Yes.
 See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
 for detailed guidance on using this package and the other datasets available in it.
 Labels available? Yes
 }
 \examples{
 data(nab_realTweets)
-nab_grp <- nab_realTweets[[1]]
-serie <- nab_grp[[1]]
+s <- nab_realTweets[[1]]
+plot(ts(s$value), main = names(nab_realTweets)[1])
+mean(s$event)
 }
 \references{
-Numenta
+Lavin, A., & Ahmad, S. (2015). Evaluating real-time anomaly
+detection algorithms – the Numenta Anomaly Benchmark. 2015 IEEE 14th
+International Conference on Machine Learning and Applications (ICMLA).
 }
 \keyword{datasets}

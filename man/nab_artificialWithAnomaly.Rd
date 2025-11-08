@@ -3,7 +3,7 @@
 \docType{data}
 \name{nab_artificialWithAnomaly}
 \alias{nab_artificialWithAnomaly}
-\title{Numenta Anomaly Benchmark (NAB) artificialWithAnomaly}
+\title{Numenta Anomaly Benchmark (NAB) – artificialWithAnomaly}
 \format{
 A list of time series.
 }
@@ -14,22 +14,21 @@ A list of time series.
 data(nab_artificialWithAnomaly)
 }
 \description{
-Data collection with real-world time-series.
-Artificial data with anomalies
-As part of the Numenta Anomaly Benchmark (NAB), this dataset contains
-time series with real and synthetic data. The real data comes from network
-monitoring and cloud computing. On the other hand, synthetic data simulate
-series with or without anomalies.
+Synthetic time series with injected anomalies from the Numenta
+Anomaly Benchmark (NAB). Designed for evaluating anomaly detection
+algorithms under controlled conditions. Labels available: Yes.
 See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
 for detailed guidance on using this package and the other datasets available in it.
 Labels available? Yes
 }
 \examples{
 data(nab_artificialWithAnomaly)
-data <- nab_artificialWithAnomaly[[1]]
-series <- data$value
+s <- nab_artificialWithAnomaly[[1]]
+plot(ts(s$value), main = names(nab_artificialWithAnomaly)[1])
 }
 \references{
-Numenta
+Lavin, A., & Ahmad, S. (2015). Evaluating real-time anomaly
+detection algorithms – the Numenta Anomaly Benchmark. 2015 IEEE 14th
+International Conference on Machine Learning and Applications (ICMLA).
 }
 \keyword{datasets}

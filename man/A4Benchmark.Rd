@@ -3,7 +3,7 @@
 \docType{data}
 \name{A4Benchmark}
 \alias{A4Benchmark}
-\title{A4Benchmark}
+\title{Yahoo Webscope S5 – A4 Benchmark (Synthetic with Anomalies and CPs)}
 \format{
 A list of time series.
 }
@@ -14,17 +14,17 @@ A list of time series.
 data(A4Benchmark)
 }
 \description{
-S5 - A Labeled Anomaly Detection Dataset.
-Data Type:	Benchmark A3. Category:	Synthetic data with anomalies and change points. Creation Date	2021.
-See Yahoo Sandbox Webscope for detailed information of the dataset.
-for detailed guidance on using this package and the other datasets available in it.
-Labels available? Yes
+Part of the Yahoo Webscope S5 dataset. A4 contains synthetic
+time series with labeled anomalies and change points. Labels available: Yes.
 }
 \examples{
 data(A4Benchmark)
-serie <- A4Benchmark[[1]]
+s <- A4Benchmark[[1]]
+mean(s$event)  # proportion of anomalous or change-point timestamps
 }
 \references{
 Yoshihara K, Takahashi K (2022) A simple method for unsupervised anomaly detection: An application to Web time series data. PLoS ONE 17(1).
+
+Truong, C., Oudre, L., & Vayatis, N. (2020). Selective review of change point detection methods. Signal Processing, 167, 107299.
 }
 \keyword{datasets}

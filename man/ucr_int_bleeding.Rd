@@ -3,29 +3,30 @@
 \docType{data}
 \name{ucr_int_bleeding}
 \alias{ucr_int_bleeding}
-\title{UCR Anomaly Benchmark - Internal Bleeding series}
+\title{UCR Anomaly Archive – Internal Bleeding}
 \format{
 A list of time series.
 }
 \source{
-\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCI Anomaly Archive}
+\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCR Anomaly Archive}
 }
 \usage{
 data(ucr_int_bleeding)
 }
 \description{
 Data collection with real-world time-series.
-Real data from Internal Bleeding Monitoring Data
+Real physiological time series with labeled anomalous intervals.
 See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
 for detailed guidance on using this package and the other datasets available in it.
 Labels available? Yes
 }
 \examples{
 data(ucr_int_bleeding)
-data <- ucr_int_bleeding[[1]]
-series <- data$value
+s <- ucr_int_bleeding[[1]]
+plot(ts(s$value))
 }
 \references{
-UCR Anomaly Archive
+UCR Time Series Anomaly Archive. See also: Chandola, V., Banerjee, A., & Kumar, V. (2009).
+Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.
 }
 \keyword{datasets}

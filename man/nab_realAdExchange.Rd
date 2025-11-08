@@ -3,7 +3,7 @@
 \docType{data}
 \name{nab_realAdExchange}
 \alias{nab_realAdExchange}
-\title{Numenta Anomaly Benchmark (NAB) realAdExchange}
+\title{Numenta Anomaly Benchmark (NAB) – realAdExchange}
 \format{
 A list of time series.
 }
@@ -14,22 +14,21 @@ A list of time series.
 data(nab_realAdExchange)
 }
 \description{
-Data collection with real-world time-series.
-Real data with anomalies
-As part of the Numenta Anomaly Benchmark (NAB), this dataset contains
-time series with real and synthetic data. The real data comes from network
-monitoring and cloud computing. On the other hand, synthetic data simulate
-series with or without anomalies.
+Real-world time series with labeled anomalies from ad exchange
+data (NAB). Useful for evaluating detection methods on operational data.
+Labels available: Yes.
 See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
 for detailed guidance on using this package and the other datasets available in it.
 Labels available? Yes
 }
 \examples{
 data(nab_realAdExchange)
-data <- nab_realAdExchange[[1]]
-series <- data$value
+s <- nab_realAdExchange[[1]]
+mean(s$event)
 }
 \references{
-Numenta
+Lavin, A., & Ahmad, S. (2015). Evaluating real-time anomaly
+detection algorithms – the Numenta Anomaly Benchmark. 2015 IEEE 14th
+International Conference on Machine Learning and Applications (ICMLA).
 }
 \keyword{datasets}

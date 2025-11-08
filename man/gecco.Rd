@@ -3,7 +3,7 @@
 \docType{data}
 \name{gecco}
 \alias{gecco}
-\title{Gecco Challenge 2018}
+\title{GECCO Challenge 2018 – Water Quality Time Series}
 \format{
 A list of time series.
 }
@@ -14,17 +14,24 @@ A list of time series.
 data(gecco)
 }
 \description{
-Data collection for water quality monitoring.
-Data Type:	Water quality. Category:	Environment. Creation Date	2018.
-See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
-for detailed guidance on using this package and the other datasets available in it.
-Labels available? Yes
+Benchmark time series for water quality monitoring composed of
+multiple sensors and an associated binary event label. This dataset
+supports research in anomaly and event detection for environmental data
+streams. See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
+for usage guidance and links to the preprocessing steps used to build the
+package-ready object. Labels available: Yes.
 }
 \examples{
 data(gecco)
-serie <- gecco[[1]]
+# Select the first univariate series and inspect
+series <- gecco[[1]]
+summary(series$value)
+# Plot values with event markers
+plot(ts(series$value), main = names(gecco)[1], ylab = "value")
 }
 \references{
-Genetic and Evolutionary Computation Conference (Gecco), Association for Computing Machinery (ACM)
+Genetic and Evolutionary Computation Conference (GECCO), Association for Computing Machinery (ACM).
+See also: Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection:
+A survey. ACM Computing Surveys, 41(3), 1–58.
 }
 \keyword{datasets}

@@ -3,7 +3,7 @@
 \docType{data}
 \name{mit_bih_V5}
 \alias{mit_bih_V5}
-\title{MIT-BIH Arrhythmia Database (MIT-BIH) - V5 sensor}
+\title{MIT-BIH Arrhythmia Database – V5 Lead}
 \format{
 A list of time series from the V5 sensor of the MIT-BIH Arrhythmia Database.
 }
@@ -26,6 +26,7 @@ data <- mit_bih_V5[[1]]
 series <- data$value
 }
 \references{
-MIT-BIH Arrhythmia Database (MIT-BIH)
+MIT-BIH Arrhythmia Database (MIT-BIH). See also: Moody, G. B., & Mark, R. G. (2001).
+The impact of the MIT-BIH Arrhythmia Database. IEEE Engineering in Medicine and Biology Magazine, 20(3), 45–50.
 }
 \keyword{datasets}

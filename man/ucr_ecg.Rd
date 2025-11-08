@@ -3,29 +3,31 @@
 \docType{data}
 \name{ucr_ecg}
 \alias{ucr_ecg}
-\title{UCR Anomaly Benchmark - ECG series}
+\title{UCR Anomaly Archive – ECG}
 \format{
 A list of time series.
 }
 \source{
-\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCI Anomaly Archive}
+\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCR Anomaly Archive}
 }
 \usage{
 data(ucr_ecg)
 }
 \description{
 Data collection with real-world time-series.
-Real data from ECG data
+Real ECG time series with labeled anomalous intervals.
 See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
 for detailed guidance on using this package and the other datasets available in it.
 Labels available? Yes
 }
 \examples{
 data(ucr_ecg)
-data <- ucr_ecg[[1]]
-series <- data$value
+# Access and plot a series
+s <- ucr_ecg[[1]]
+plot(ts(s$value), main = names(ucr_ecg)[1])
 }
 \references{
-UCR Anomaly Archive
+UCR Time Series Anomaly Archive. See also: Chandola, V., Banerjee, A., & Kumar, V. (2009).
+Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.
 }
 \keyword{datasets}

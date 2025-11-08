@@ -13,7 +13,7 @@ BugReports: https://github.com/cefet-rj-dal/united/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.1.0)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 LazyData: true
 LazyDataCompression: xz
 Imports: 

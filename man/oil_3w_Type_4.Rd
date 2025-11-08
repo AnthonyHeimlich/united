@@ -3,7 +3,7 @@
 \docType{data}
 \name{oil_3w_Type_4}
 \alias{oil_3w_Type_4}
-\title{Oil wells dataset - Type 4}
+\title{Oil Wells Dataset – Type 4}
 \format{
 A list of time series.
 }
@@ -14,7 +14,7 @@ A list of time series.
 data(oil_3w_Type_4)
 }
 \description{
-Firts realistic dataset with real events in oil well drilling. The data available
+First realistic dataset with real events in oil well drilling. The data available
 in this package consist of time series already analyzed and applied in
 research experiments by the DAL group (Data Analytics Lab). The series are
 divided into 7 groups (Type_0, Type_1, Type_2, Type_4, Type_5, Type_6, Type_7 and Type_8).
@@ -28,6 +28,7 @@ data(oil_3w_Type_4)
 serie <- oil_3w_Type_4[[1]]
 }
 \references{
-3W dataset Data Set
+3W dataset (UCI repository). See also: Truong, C., Oudre, L., & Vayatis, N. (2020).
+Selective review of change point detection methods. Signal Processing, 167, 107299.
 }
 \keyword{datasets}

@@ -3,29 +3,30 @@
 \docType{data}
 \name{ucr_power_demand}
 \alias{ucr_power_demand}
-\title{UCR Anomaly Benchmark - Italian Power Demand}
+\title{UCR Anomaly Archive – Italian Power Demand}
 \format{
 A list of time series.
 }
 \source{
-\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCI Anomaly Archive}
+\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCR Anomaly Archive}
 }
 \usage{
 data(ucr_power_demand)
 }
 \description{
 Data collection with real-world time-series.
-Real data from Italian Power Demand
+Real power demand time series with labeled anomalous intervals.
 See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
 for detailed guidance on using this package and the other datasets available in it.
 Labels available? Yes
 }
 \examples{
 data(ucr_power_demand)
-data <- ucr_power_demand[[1]]
-series <- data$value
+s <- ucr_power_demand[[1]]
+summary(s$value)
 }
 \references{
-UCR Anomaly Archive
+UCR Time Series Anomaly Archive. See also: Chandola, V., Banerjee, A., & Kumar, V. (2009).
+Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.
 }
 \keyword{datasets}

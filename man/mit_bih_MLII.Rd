@@ -3,7 +3,7 @@
 \docType{data}
 \name{mit_bih_MLII}
 \alias{mit_bih_MLII}
-\title{MIT-BIH Arrhythmia Database (MIT-BIH) - MLII sensor}
+\title{MIT-BIH Arrhythmia Database – MLII Lead}
 \format{
 A list of time series from the MLII sensor of the MIT-BIH Arrhythmia Database.
 }
@@ -26,6 +26,7 @@ data <- mit_bih_MLII[[1]]
 series <- data$value
 }
 \references{
-MIT-BIH Arrhythmia Database (MIT-BIH)
+MIT-BIH Arrhythmia Database (MIT-BIH). See also: Moody, G. B., & Mark, R. G. (2001).
+The impact of the MIT-BIH Arrhythmia Database. IEEE Engineering in Medicine and Biology Magazine, 20(3), 45–50.
 }
 \keyword{datasets}

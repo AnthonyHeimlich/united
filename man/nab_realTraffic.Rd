@@ -30,6 +30,8 @@ nab_grp <- nab_realTraffic[[1]]
 serie <- nab_grp[[1]]
 }
 \references{
-Numenta
+Lavin, A., & Ahmad, S. (2015). Evaluating real-time anomaly
+detection algorithms – the Numenta Anomaly Benchmark. 2015 IEEE 14th
+International Conference on Machine Learning and Applications (ICMLA).
 }
 \keyword{datasets}

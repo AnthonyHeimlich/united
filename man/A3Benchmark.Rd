@@ -3,7 +3,7 @@
 \docType{data}
 \name{A3Benchmark}
 \alias{A3Benchmark}
-\title{A3Benchmark}
+\title{Yahoo Webscope S5 – A3 Benchmark (Synthetic with Outliers)}
 \format{
 A list of time series.
 }
@@ -14,17 +14,15 @@ A list of time series.
 data(A3Benchmark)
 }
 \description{
-S5 - A Labeled Anomaly Detection Dataset.
-Data Type:	Benchmark A3. Category:	Synthetic data with outliers. Creation Date	2021.
-See Yahoo Sandbox Webscope for detailed information of the dataset.
-for detailed guidance on using this package and the other datasets available in it.
-Labels available? Yes
+Part of the Yahoo Webscope S5 dataset. A3 contains synthetic
+time series with labeled outliers/anomalies. Labels available: Yes.
 }
 \examples{
 library(harbinger)
 data(A3Benchmark)
-serie <- A3Benchmark[[1]]
-har_plot(harbinger(), serie$value)
+s <- A3Benchmark[[1]]
+# Quick visualization with harbinger
+har_plot(harbinger(), s$value)
 }
 \references{
 Yoshihara K, Takahashi K (2022) A simple method for unsupervised anomaly detection: An application to Web time series data. PLoS ONE 17(1).

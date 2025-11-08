@@ -3,29 +3,30 @@
 \docType{data}
 \name{ucr_nasa}
 \alias{ucr_nasa}
-\title{UCR Anomaly Benchmark - NASA spacecraft series}
+\title{UCR Anomaly Archive – NASA Spacecraft}
 \format{
 A list of time series.
 }
 \source{
-\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCI Anomaly Archive}
+\href{https://paperswithcode.com/dataset/ucr-anomaly-archive/}{UCR Anomaly Archive}
 }
 \usage{
 data(ucr_nasa)
 }
 \description{
 Data collection with real-world time-series.
-Real data from NASA Spacecraft Monitoring Data
+Real NASA spacecraft monitoring time series with labeled anomalous intervals.
 See \href{https://github.com/cefet-rj-dal/united}{cefet-rj-dal/united}
 for detailed guidance on using this package and the other datasets available in it.
 Labels available? Yes
 }
 \examples{
 data(ucr_nasa)
-data <- ucr_nasa[[1]]
-series <- data$value
+s <- ucr_nasa[[1]]
+mean(s$event)
 }
 \references{
-UCR Anomaly Archive
+UCR Time Series Anomaly Archive. See also: Chandola, V., Banerjee, A., & Kumar, V. (2009).
+Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.
 }
 \keyword{datasets}

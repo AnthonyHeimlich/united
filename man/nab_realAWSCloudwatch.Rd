@@ -3,7 +3,7 @@
 \docType{data}
 \name{nab_realAWSCloudwatch}
 \alias{nab_realAWSCloudwatch}
-\title{Numenta Anomaly Benchmark (NAB) realAdExchange}
+\title{Numenta Anomaly Benchmark (NAB) realAWSCloudwatch}
 \format{
 A list of time series.
 }
@@ -30,6 +30,8 @@ nab_grp <- nab_realAWSCloudwatch[[1]]
 serie <- nab_grp[[1]]
 }
 \references{
-Numenta
+Lavin, A., & Ahmad, S. (2015). Evaluating real-time anomaly
+detection algorithms – the Numenta Anomaly Benchmark. 2015 IEEE 14th
+International Conference on Machine Learning and Applications (ICMLA).
 }
 \keyword{datasets}

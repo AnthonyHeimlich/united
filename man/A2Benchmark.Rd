@@ -3,7 +3,7 @@
 \docType{data}
 \name{A2Benchmark}
 \alias{A2Benchmark}
-\title{A2Benchmark}
+\title{Yahoo Webscope S5 – A2 Benchmark (Synthetic)}
 \format{
 A list of time series.
 }
@@ -14,17 +14,18 @@ A list of time series.
 data(A2Benchmark)
 }
 \description{
-S5 - A Labeled Anomaly Detection Dataset.
-Data Type:	Benchmark A2. Category:	Synthetic data. Creation Date	2021.
-See Yahoo Sandbox Webscope for detailed information of the dataset.
-for detailed guidance on using this package and the other datasets available in it.
-Labels available? Yes
+Part of the Yahoo Webscope S5 dataset. A2 contains synthetic
+time series with labeled anomalies designed to stress-test algorithms.
+Labels available: Yes.
 }
 \examples{
 data(A2Benchmark)
-serie <- A2Benchmark[[1]]
+s <- A2Benchmark[[1]]
+summary(s$value)
 }
 \references{
 Yoshihara K, Takahashi K (2022) A simple method for unsupervised anomaly detection: An application to Web time series data. PLoS ONE 17(1).
+
+Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.
 }
 \keyword{datasets}

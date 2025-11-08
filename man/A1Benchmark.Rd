@@ -3,7 +3,7 @@
 \docType{data}
 \name{A1Benchmark}
 \alias{A1Benchmark}
-\title{A1Benchmark}
+\title{Yahoo Webscope S5 – A1 Benchmark (Real)}
 \format{
 A list of time series.
 }
@@ -14,16 +14,21 @@ A list of time series.
 data(A1Benchmark)
 }
 \description{
-S5 - A Labeled Anomaly Detection Dataset.
-Data Type:	Benchmark A1. Category:	Real data. Creation Date	2021.
-See Yahoo Sandbox Webscope for detailed information of the dataset.
-Labels available? Yes
+Part of the Yahoo Webscope S5 labeled anomaly detection dataset.
+A1 contains real-world time series with binary anomaly labels. Useful for
+evaluating anomaly detection methods on real traffic-like data. Labels
+available: Yes.
 }
 \examples{
 data(A1Benchmark)
-serie <- A1Benchmark[[1]]
+# Access the first series and visualize
+s <- A1Benchmark[[1]]
+plot(ts(s$value), main = names(A1Benchmark)[1], ylab = "value")
+mean(s$event)  # proportion of labeled anomalies
 }
 \references{
 Yoshihara K, Takahashi K (2022) A simple method for unsupervised anomaly detection: An application to Web time series data. PLoS ONE 17(1).
+
+Chandola, V., Banerjee, A., & Kumar, V. (2009). Anomaly detection: A survey. ACM Computing Surveys, 41(3), 1–58.
 }
 \keyword{datasets}
