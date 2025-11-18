@@ -1,0 +1,117 @@
+---
+title: "3W Dataset — Oil Wells — Comparação CUSUM com Sliding Window e Warmup"
+output: html_notebook
+editor_options:
+  chunk_output_type: inline
+---
+
+
+library(united)
+library(daltoolbox)
+library(harbinger)
+library(dplyr)
+
+
+
+# Carrega dataset e seleciona primeiro poço
+data(oil_3w_Type_1)
+data <- oil_3w_Type_1[[1]]
+series <- data$p_tpt
+plot(as.ts(series))
+#Pega o primeiro poço do dataset Type_1. Seleciona um sensor específico (p_tpt). Plota a série temporal (linha do sensor).
+
+
+
+cusumStandardSlidingWarmup <- function(values, threshold = 3, window_size = 200, warmup_windows = 5){
+  n <- length(values)
+  detection <- rep(FALSE, n)
+  warmup_size <- warmup_windows * window_size
+  
+  for(i in (warmup_size + 1):(n - window_size + 1)){
+    window <- values[i:(i + window_size - 1)]
+    mean_val <- mean(window)
+    posCusum <- 0
+    negCusum <- 0
+    
+    for(j in seq_along(window)){
+      x <- window[j]
+      posCusum <- max(0, posCusum + (x - mean_val))
+      negCusum <- min(0, negCusum + (x - mean_val))
+      
+      if(posCusum > threshold | abs(negCusum) > threshold){
+        detection[i + j - 1] <- TRUE
+        posCusum <- 0
+        negCusum <- 0
+      }
+    }
+  }
+  return(detection)
+}
+#Calcula o CUSUM clássico com janela deslizante e período de warmup.
+#As primeiras 'warmup_windows' janelas não disparam detecção, permitindo estabilizar a média.
+
+
+
+cusumDoubleThresholdSlidingWarmup <- function(values, lowTC = 2, highTC = 5, window_size = 200, warmup_windows = 5){
+  n <- length(values)
+  detection <- rep(0, n)
+  warmup_size <- warmup_windows * window_size
+  
+  for(i in (warmup_size + 1):(n - window_size + 1)){
+    window <- values[i:(i + window_size - 1)]
+    mean_val <- mean(window)
+    posCusum <- 0
+    negCusum <- 0
+    
+    for(j in seq_along(window)){
+      x <- window[j]
+      posCusum <- max(0, posCusum + (x - mean_val))
+      negCusum <- min(0, negCusum + (x - mean_val))
+      
+      if(posCusum > highTC | abs(negCusum) > highTC){
+        detection[i + j - 1] <- 2
+        posCusum <- 0
+        negCusum <- 0
+      } else if(posCusum > lowTC | abs(negCusum) > lowTC){
+        detection[i + j - 1] <- 1
+      }
+    }
+  }
+  return(detection)
+}
+#Mesma lógica do double threshold, mas com warmup inicial para estabilizar as estatísticas.
+
+
+
+window_size <- 200
+warmup_windows <- 5
+detection_std <- cusumStandardSlidingWarmup(series, threshold = 3, window_size = window_size, warmup_windows = warmup_windows)
+detection_dt  <- cusumDoubleThresholdSlidingWarmup(series, lowTC = 2, highTC = 5, window_size = window_size, warmup_windows = warmup_windows)
+#Detecta os pontos de mudança usando os dois métodos com janela deslizante e período de warmup.
+
+
+
+ev_std <- evaluate(har_eval_soft(sw = 90), detection_std, data$event)
+ev_dt  <- evaluate(har_eval_soft(sw = 90), detection_dt > 0, data$event)
+#data$event - pontos de mudança reais fornecidos pelo dataset.
+#SoftED considera uma tolerância temporal (sw = 90): se uma detecção está a até 90 amostras de um evento real, é considerada correta.
+#ev_std e ev_dt armazenam métricas: Accuracy - % de acertos gerais, F1 - equilíbrio entre verdadeiros positivos e falsos positivos.
+
+
+
+metrics <- data.frame(
+  Method = c("Standard CUSUM", "Double Threshold CUSUM"),
+  Accuracy = c(ev_std$accuracy, ev_dt$accuracy),
+  F1 = c(ev_std$F1, ev_dt$F1)
+)
+metrics
+#Cria uma tabela comparando Accuracy e F1 dos dois métodos.
+#F1 é a métrica mais importante, porque o dataset é muito desbalanceado (poucas mudanças vs muitos valores normais).
+
+
+
+plot(series, type = "l", main = "CUSUM Sliding Window + Warmup Comparison", ylab = "Sensor value")
+points(which(detection_std), series[detection_std], col = rgb(0,0,1,0.5), pch = 16)
+points(which(detection_dt > 0), series[detection_dt > 0], col = rgb(1,0,0,0.5), pch = 17)
+legend("topright", legend = c("Standard", "DoubleThreshold"), col = c("blue","red"), pch = c(16,17))
+
