@@ -1,0 +1,191 @@
+---
+title: "Dados Sintéticos - Comparação CUSUM Standard vs Double Threshold"
+output: html_notebook
+editor_options:
+  chunk_output_type: inline
+---
+
+library(daltoolbox)
+library(harbinger)
+library(dplyr)
+
+
+# Dados Sintéticos 
+# Objetivo: Simular um processo industrial com:
+#    Regime normal
+#    Drift lento (alerta)
+#    Falha abrupta (crítico)
+n_points <- 600
+noise <- rnorm(n_points, mean = 0, sd = 2000)
+base_value <- 18500000
+synthetic_series <- rep(base_value, n_points) + noise
+
+
+# Drift lento (alerta)
+slope_slow <- 1500
+synthetic_series[201:400] <- synthetic_series[201:400] +
+                             seq(0, by = slope_slow, length.out = 200)
+
+# Falha abrupta (crítico)
+last_val <- synthetic_series[400] - base_value - noise[400]
+slope_fast <- 50000
+synthetic_series[401:600] <- synthetic_series[401:600] +
+                             last_val + seq(0, by = slope_fast, length.out = 200)
+
+
+# Cálculo dos Resíduos (erro simulado)
+# Aqui usamos primeira diferença como "erro de reconstrução"
+residuals <- c(0, diff(synthetic_series))
+#                                           OBS: Quando o AE estiver pronto, basta substituir:
+#                                           residuals <- reconstruction_error_vector
+
+
+
+# Warmup - Período onde o processo está normal. Usado para calibrar:
+#    média do erro (mu_e)
+#    desvio padrão (sigma)
+#    thresholds via percentis
+warmup_len <- 150
+warmup_errors <- residuals[1:warmup_len]
+
+mu_e  <- mean(warmup_errors)
+sigma <- sd(warmup_errors)
+
+# Folga do CUSUM
+k_param <- 0.5 * sigma
+
+# Thresholds via percentis (Low / High)
+p_low  <- 0.93
+p_high <- 0.98
+
+h_low  <- quantile(abs(warmup_errors), probs = p_low)
+h_high <- quantile(abs(warmup_errors), probs = p_high)
+
+# Threshold único para CUSUM Standard
+h_std  <- quantile(abs(warmup_errors), probs = 0.97)
+
+# Janela de silêncio após detecção
+hold_off_steps <- 5
+
+
+
+# CUSUM Standard 
+cusumStd <- function(res, mu_e, k, h, series_values, warmup_len = 0, hold_off = 0) {
+  n <- length(res)
+  det <- rep(NA, n)
+  pos <- 0; neg <- 0
+  freeze_cnt <- 0
+  
+  for (i in 1:n) {
+    if (i <= warmup_len) next
+    if (freeze_cnt > 0) { freeze_cnt <- freeze_cnt - 1; next }
+    
+    err_centered <- res[i] - mu_e
+    
+    pos <- max(0, pos + err_centered - k)
+    neg <- min(0, neg + err_centered + k)
+    
+    if (pos > h | neg < -h) {
+      det[i] <- series_values[i]
+      pos <- 0; neg <- 0
+      freeze_cnt <- hold_off
+    }
+  }
+  return(det)
+}
+
+
+# CUSUM Double Threshold (Low -> High)
+cusumDouble <- function(res, mu_e, k, hl, hh, series_values, warmup_len = 0, hold_off = 0) {
+  n <- length(res)
+  det_L <- rep(NA, n)
+  det_H <- rep(NA, n)
+  pos <- 0; neg <- 0
+  freeze_cnt <- 0
+  
+  for (i in 1:n) {
+    if (i <= warmup_len) next
+    if (freeze_cnt > 0) { freeze_cnt <- freeze_cnt - 1; next }
+    
+    err_centered <- res[i] - mu_e
+    pos <- max(0, pos + err_centered - k)
+    neg <- min(0, neg + err_centered + k)
+    
+    if (pos > hh | neg < -hh) {
+      det_H[i] <- series_values[i]
+      pos <- 0; neg <- 0
+      freeze_cnt <- hold_off
+    } else if (pos > hl | neg < -hl) {
+      det_L[i] <- series_values[i]
+    }
+  }
+  
+  return(list(low = det_L, high = det_H))
+}
+
+
+# Execução dos Detectores
+res_std_final <- cusumStd(residuals, mu_e, k_param, h_std,
+                          series_values = synthetic_series,
+                          warmup_len = warmup_len,
+                          hold_off = hold_off_steps)
+
+res_dt_final  <- cusumDouble(residuals, mu_e, k_param, h_low, h_high,
+                             series_values = synthetic_series,
+                             warmup_len = warmup_len,
+                             hold_off = hold_off_steps)
+
+
+# Visualização e Análise Comparativa
+y_lims <- range(synthetic_series, na.rm = TRUE)
+
+par(mfrow = c(2,1), mar = c(4, 5, 3, 1))
+
+# Standard CUSUM 
+plot(synthetic_series, type = "l", col = "lightblue", lwd = 2, ylim = y_lims,
+     main = "Standard CUSUM (Limiar Único)", 
+     ylab = "Amplitude (u.a.)", xlab = "") 
+grid()
+
+abline(v = warmup_len, lty = 2, col = "gray60") 
+abline(v = 200, lty = 2, col = "gray75")
+abline(v = 400, lty = 2, col = "gray75")
+
+mtext("Normal", side = 3, at = 100, cex = 0.8, col = "gray40")
+mtext("Alerta", side = 3, at = 300, cex = 0.8, col = "gray40")
+mtext("Crítico", side = 3, at = 500, cex = 0.8, col = "gray40")
+
+points(which(!is.na(res_std_final)), synthetic_series[which(!is.na(res_std_final))],
+       col = "red", pch = 19, cex = 1.2)
+
+legend("topleft", legend = "Detecção Binária", 
+       col = "red", pch = 19, bty = "o", bg = "white", box.col = "gray80", cex = 0.8)
+
+
+# Double Threshold
+plot(synthetic_series, type = "l", col = "lightblue", lwd = 2, ylim = y_lims,
+     main = "Double Threshold CUSUM (Limiar Duplo)", 
+     ylab = "Amplitude (u.a.)", xlab = "Tempo (t)")
+grid()
+
+abline(v = warmup_len, lty = 2, col = "gray60") 
+abline(v = 200, lty = 2, col = "gray75")
+abline(v = 400, lty = 2, col = "gray75")
+
+mtext("Normal", side = 3, at = 100, cex = 0.8, col = "gray40")
+mtext("Alerta", side = 3, at = 300, cex = 0.8, col = "gray40")
+mtext("Crítico", side = 3, at = 500, cex = 0.8, col = "gray40")
+
+# Alertas Low 
+low_idx <- which(!is.na(res_dt_final$low))
+points(low_idx, synthetic_series[low_idx], pch = 21, bg = "yellow", col = "black", cex = 1.4)
+
+# Falhas High
+high_idx <- which(!is.na(res_dt_final$high))
+points(high_idx, synthetic_series[high_idx], pch = 17, col = "blue", cex = 2.0)
+
+legend("topleft", legend = c("Nível de Alerta (Low)", "Nível Crítico (High)"), 
+       pt.bg = c("yellow", "red"), col = c("black", "red"), 
+       pch = c(21, 17), bty = "o", bg = "white", box.col = "gray80", cex = 0.8)
+
+par(mfrow = c(1,1))
