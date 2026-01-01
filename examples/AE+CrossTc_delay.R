@@ -113,14 +113,29 @@ cusum_cross_tc_step <- function(x, k, h_low, h_high, pos, neg) {
 
 data(oil_3w_Type_1)
 
-#df <- oil_3w_Type_1[[1]]
-df <- oil_3w_Type_1[["WELL-00001_20140124213136"]]
-#df <- oil_3w_Type_1[["WELL-00002_20140126200050"]]
+# Escolha do Poço
+#df <- oil_3w_Type_1[["WELL-00001_20140124213136"]]
+df <- oil_3w_Type_1[["WELL-00002_20140126200050"]]
 
-series_name <- "p_tpt"
+# Lista de sensores disponíveis
+sensor_list <- c("p_pdg", "p_tpt", "t_tpt", "p_mon_ckp", "t_jus_ckp", "p_jus_ckgl", "qgl")
+
+# ---------------------------------------------------------
+# SELECIONE O SENSOR AQUI (1 a 7)
+# 1: p_pdg      (Pressão Fundo)
+# 2: p_tpt      (Pressão Cabeça)
+# 3: t_tpt      (Temp. Cabeça)
+# 4: p_mon_ckp  (Pressão Montante Choke)
+# 5: t_jus_ckp  (Temp. Jusante Choke)
+# 6: p_jus_ckgl (Pressão Jusante GL)
+# 7: qgl        (Vazão Gas Lift)
+# ---------------------------------------------------------
+i_sensor <- 1
+
+series_name <- sensor_list[i_sensor]
 series <- df[[series_name]]
 
-labels <- as.integer(df$event)  # FALSE -> 0 | TRUE -> 1
+labels <- as.integer(df$event)
 n <- length(series)
 
 # =========================================================
@@ -362,39 +377,70 @@ g2 <- ggplot(df_plot, aes(x = Index, y = ErrorNorm)) +
 grid.arrange(g1, g2, ncol = 1, heights = c(1.2, 1))
 
 # =========================================================
-# AVALIAÇÃO (Delay)
+# 7. AVALIAÇÃO DE DELAY (ATRASO)
 # =========================================================
 
-delay <- sapply(event_idx, function(e) {
+delay_glr <- sapply(event_idx, function(e) {
   det <- drift_indices[drift_indices >= e][1]
   ifelse(is.na(det), NA, det - e)
 })
 
-summary(delay)
+stats_delay <- summary(delay_glr)
 
-cat("Eventos reais:", length(event_idx), "\n")
-cat("Eventos detectados:", sum(!is.na(delay)), "\n")
-cat("Eventos perdidos:", sum(is.na(delay)), "\n")
+cat("\n================ DELAY (ATRASO) ====================\n")
+if(all(is.na(delay_glr))) {
+  cat("Nenhum evento detectado para calcular delay.\n")
+} else {
+  # Verifica se existe o valor no summary antes de imprimir para evitar erro
+  get_stat <- function(s, name) ifelse(name %in% names(s), as.numeric(s[name]), NA)
 
-# =========================================================
-# Precision / Recall com tolerância
-# =========================================================
-
-TOL <- 250  # janela de tolerância em amostras
-
-pred_tol <- rep(0, n)
-for (d in drift_indices) {
-  pred_tol[max(1, d - TOL):min(n, d + TOL)] <- 1
+  cat("Mínimo   :", get_stat(stats_delay, "Min."), "\n")
+  cat("Mediana  :", get_stat(stats_delay, "Median"), "\n")
+  cat("Média    :", round(get_stat(stats_delay, "Mean"), 2), "\n")
+  cat("Máximo   :", get_stat(stats_delay, "Max."), "\n")
 }
 
-ref_tol <- label_drift
+cat("\n----------------------------------------------------\n")
+cat("Eventos reais totais   :", length(event_idx), "\n")
+cat("Eventos detectados     :", sum(!is.na(delay_glr)), "\n")
+cat("Eventos não detectados :", sum(is.na(delay_glr)), "\n")
 
-cm_tol <- confusionMatrix(
-  factor(pred_tol, levels = c(0,1)),
-  factor(ref_tol, levels = c(0,1)),
+
+# =========================================================
+# 8. AVALIAÇÃO COM TOLERÂNCIA (+/- 250)
+# =========================================================
+
+TOL <- 250
+
+pred_tol_glr <- rep(0, n)
+# Preenche "1" ao redor das detecções do GLR com a margem de tolerância
+for (d in drift_indices) {
+  pred_tol_glr[max(1, d - TOL):min(n, d + TOL)] <- 1
+}
+
+ref_tol_glr <- label_drift # Usa a referência padrão definida acima
+
+cm_tol_glr <- confusionMatrix(
+  factor(pred_tol_glr, levels = c(0,1)),
+  factor(ref_tol_glr, levels = c(0,1)),
   positive = "1"
 )
 
-print(cm_tol$table)
-print(cm_tol$byClass)
+TN_tol <- cm_tol_glr$table["0","0"]
+FP_tol <- cm_tol_glr$table["1","0"]
+FN_tol <- cm_tol_glr$table["0","1"]
+TP_tol <- cm_tol_glr$table["1","1"]
+
+cat("\n================ MATRIZ (COM TOLERÂNCIA +/- 250) ===\n")
+cat("Verdadeiro Negativo (TN):", TN_tol, "\n")
+cat("Falso Positivo      (FP):", FP_tol, "\n")
+cat("Falso Negativo      (FN):", FN_tol, "\n")
+cat("Verdadeiro Positivo (TP):", TP_tol, "\n")
+
+cat("\n================ MÉTRICAS (COM TOLERÂNCIA) =========\n")
+cat("Precisão :", round(cm_tol_glr$byClass["Precision"], 4), "\n")
+cat("Recall   :", round(cm_tol_glr$byClass["Sensitivity"], 4), "\n")
+cat("F1-score :", round(cm_tol_glr$byClass["F1"], 4), "\n")
+cat("====================================================\n")
+
 
