@@ -1,5 +1,9 @@
+#Limpando sessão Rstudio
+rm(list = ls())
+gc()
+
 # =========================================================
-# GLR CLÁSSICO — BASELINE ESTATÍSTICO
+# BIBLIOTECAS
 # =========================================================
 
 library(ggplot2)
@@ -8,37 +12,14 @@ library(caret)
 library(dplyr)
 
 # =========================================================
-# DADOS
-# =========================================================
-
-data(oil_3w_Type_1)
-df <- oil_3w_Type_1[[1]]
-
-series <- df$p_tpt
-labels <- df$event
-labels[is.na(labels)] <- 0
-n <- length(series)
-
-# =========================================================
-# PARÂMETROS DO GLR
-# =========================================================
-
-WARMUP        <- 500
-GLR_WINDOW    <- 60     # janela usada no teste
-GLR_THRESHOLD <- 8      # limiar de decisão (ajustável)
-MIN_SEG       <- 15     # tamanho mínimo de cada segmento
-
-# =========================================================
-# FUNÇÃO GLR
+# FUNÇÕES AUXILIARES
 # =========================================================
 
 glr_statistic <- function(x) {
-
   N <- length(x)
   best <- 0
 
-  for (k in MIN_SEG:(N - MIN_SEG)) {
-
+  for (k in 15:(N - 15)) {
     x1 <- x[1:k]
     x2 <- x[(k + 1):N]
 
@@ -51,9 +32,48 @@ glr_statistic <- function(x) {
       best <- max(best, stat)
     }
   }
-
   best
 }
+
+# =========================================================
+# DADOS
+# =========================================================
+
+data(oil_3w_Type_1)
+
+# Escolha do Poço
+#df <- oil_3w_Type_1[["WELL-00001_20140124213136"]]
+df <- oil_3w_Type_1[["WELL-00002_20140126200050"]]
+
+# Lista de sensores disponíveis
+sensor_list <- c("p_pdg", "p_tpt", "t_tpt", "p_mon_ckp", "t_jus_ckp", "p_jus_ckgl", "qgl")
+
+# ---------------------------------------------------------
+# SELECIONE O SENSOR AQUI (1 a 7)
+# 1: p_pdg      (Pressão Fundo)
+# 2: p_tpt      (Pressão Cabeça)
+# 3: t_tpt      (Temp. Cabeça)
+# 4: p_mon_ckp  (Pressão Montante Choke)
+# 5: t_jus_ckp  (Temp. Jusante Choke)
+# 6: p_jus_ckgl (Pressão Jusante GL)
+# 7: qgl        (Vazão Gas Lift)
+# ---------------------------------------------------------
+i_sensor <- 1
+
+series_name <- sensor_list[i_sensor]
+series <- df[[series_name]]
+
+labels <- as.integer(df$event)
+n <- length(series)
+
+# =========================================================
+# HIPERPARÂMETROS FIXOS
+# =========================================================
+
+WARMUP        <- 500
+GLR_WINDOW    <- 60
+GLR_THRESHOLD <- 8
+MIN_SEG       <- 15
 
 # =========================================================
 # MONITORAMENTO
@@ -77,9 +97,10 @@ for (t in (WARMUP + GLR_WINDOW):n) {
 }
 
 # =========================================================
-# AVALIAÇÃO (MESMA DO MÉTODO HÍBRIDO)
+# AVALIAÇÃO (DRIFT)
 # =========================================================
 
+# Expande rótulos para janela de tolerância
 label_drift <- rep(0, n)
 event_idx <- which(labels == 1)
 
@@ -93,15 +114,31 @@ pred_vec <- factor(results_drift[valid_idx], levels = c(0,1))
 ref_vec  <- factor(label_drift[valid_idx], levels = c(0,1))
 
 cm <- confusionMatrix(pred_vec, ref_vec, positive = "1")
-print(cm$table)
 
-cat("\nPrecisão:", cm$byClass["Precision"])
-cat("\nRecall:", cm$byClass["Sensitivity"])
-cat("\nF1:", cm$byClass["F1"])
-cat("\nPrimeiro drift detectado em t =", ifelse(length(drift_indices)>0, drift_indices[1], "Nenhum"))
+# -------------------------
+# MATRIZ DE CONFUSÃO (LEGÍVEL)
+# -------------------------
+TN <- cm$table["0","0"]
+FP <- cm$table["1","0"]
+FN <- cm$table["0","1"]
+TP <- cm$table["1","1"]
+
+cat("\n================ MATRIZ DE CONFUSÃO ================\n")
+cat("Verdadeiro Negativo (TN):", TN, "\n")
+cat("Falso Positivo      (FP):", FP, "\n")
+cat("Falso Negativo      (FN):", FN, "\n")
+cat("Verdadeiro Positivo (TP):", TP, "\n")
+
+cat("\n================ MÉTRICAS ==========================\n")
+cat("Precisão :", round(cm$byClass["Precision"], 4), "\n")
+cat("Recall   :", round(cm$byClass["Sensitivity"], 4), "\n")
+cat("F1-score :", round(cm$byClass["F1"], 4), "\n")
+
+cat("\nPrimeiro drift detectado em t =",
+    ifelse(length(drift_indices) > 0, drift_indices[1], "Nenhum"), "\n")
 
 # =========================================================
-# PREPARAÇÃO PARA GRÁFICOS
+# PREPARAÇÃO DOS DADOS PARA GRÁFICOS
 # =========================================================
 
 df_plot <- data.frame(
@@ -112,11 +149,14 @@ df_plot <- data.frame(
   Real   = labels
 )
 
+# Alarmes confirmados pelo GLR
 df_alarm <- df_plot[df_plot$Alarm == 1, ]
+
+# Eventos reais (ground truth)
 df_anom  <- df_plot[df_plot$Real == 1, ]
 
 # =========================================================
-# GRÁFICO 1 — SÉRIE + ALARMES GLR
+# GRÁFICO 1 — SÉRIE TEMPORAL + GLR
 # =========================================================
 
 g1 <- ggplot(df_plot, aes(x = Index)) +
@@ -139,14 +179,14 @@ g1 <- ggplot(df_plot, aes(x = Index)) +
   scale_color_manual(
     name = "Legenda",
     values = c(
-      "Alarme GLR"   = "darkgreen",
+      "Alarme GLR"    = "darkgreen",
       "Anomalia Real" = "black"
     )
   ) +
 
   labs(
-    title = "Série temporal com alarmes do GLR clássico",
-    y = "Pressão",
+    title = paste("Série:", series_name, "- Alarmes GLR"),
+    y = "Valor",
     x = "Índice"
   ) +
 
@@ -163,20 +203,12 @@ g2 <- ggplot(df_plot, aes(x = Index, y = GLR)) +
   geom_hline(
     yintercept = GLR_THRESHOLD,
     linetype = "dashed",
-    color = "gray40"
-  ) +
-
-  geom_point(
-    data = df_alarm,
-    aes(y = GLR),
-    color = "darkgreen",
-    shape = 17,
-    size = 3
+    color = "red"
   ) +
 
   labs(
-    title = "Estatística GLR ao longo do tempo",
-    y = "GLR",
+    title = "Estatística GLR",
+    y = "GLR Score",
     x = "Índice"
   ) +
 
