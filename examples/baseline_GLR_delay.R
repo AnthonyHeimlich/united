@@ -12,41 +12,14 @@ library(caret)
 library(dplyr)
 
 # =========================================================
-# DADOS
-# =========================================================
-
-data(oil_3w_Type_1)
-
-#df <- oil_3w_Type_1[[1]]
-#df <- oil_3w_Type_1[["WELL-00001_20140124213136"]]
-df <- oil_3w_Type_1[["WELL-00002_20140126200050"]]
-
-series_name <- "p_tpt"
-series <- df[[series_name]]
-
-labels <- as.integer(df$event)  # FALSE -> 0 | TRUE -> 1
-n <- length(series)
-
-# =========================================================
-# PARÂMETROS DO GLR
-# =========================================================
-
-WARMUP        <- 500
-GLR_WINDOW    <- 60     # janela usada no teste
-GLR_THRESHOLD <- 8      # limiar de decisão
-MIN_SEG       <- 15     # tamanho mínimo de cada segmento
-
-# =========================================================
-# FUNÇÃO GLR
+# FUNÇÕES AUXILIARES
 # =========================================================
 
 glr_statistic <- function(x) {
-
   N <- length(x)
   best <- 0
 
-  for (k in MIN_SEG:(N - MIN_SEG)) {
-
+  for (k in 15:(N - 15)) {
     x1 <- x[1:k]
     x2 <- x[(k + 1):N]
 
@@ -59,9 +32,48 @@ glr_statistic <- function(x) {
       best <- max(best, stat)
     }
   }
-
   best
 }
+
+# =========================================================
+# DADOS
+# =========================================================
+
+data(oil_3w_Type_1)
+
+# Escolha do Poço
+#df <- oil_3w_Type_1[["WELL-00001_20140124213136"]]
+df <- oil_3w_Type_1[["WELL-00002_20140126200050"]]
+
+# Lista de sensores disponíveis
+sensor_list <- c("p_pdg", "p_tpt", "t_tpt", "p_mon_ckp", "t_jus_ckp", "p_jus_ckgl", "qgl")
+
+# ---------------------------------------------------------
+# SELECIONE O SENSOR AQUI (1 a 7)
+# 1: p_pdg      (Pressão Fundo)
+# 2: p_tpt      (Pressão Cabeça)
+# 3: t_tpt      (Temp. Cabeça)
+# 4: p_mon_ckp  (Pressão Montante Choke)
+# 5: t_jus_ckp  (Temp. Jusante Choke)
+# 6: p_jus_ckgl (Pressão Jusante GL)
+# 7: qgl        (Vazão Gas Lift)
+# ---------------------------------------------------------
+i_sensor <- 1
+
+series_name <- sensor_list[i_sensor]
+series <- df[[series_name]]
+
+labels <- as.integer(df$event)
+n <- length(series)
+
+# =========================================================
+# HIPERPARÂMETROS FIXOS
+# =========================================================
+
+WARMUP        <- 500
+GLR_WINDOW    <- 60
+GLR_THRESHOLD <- 8
+MIN_SEG       <- 15
 
 # =========================================================
 # MONITORAMENTO
@@ -85,10 +97,10 @@ for (t in (WARMUP + GLR_WINDOW):n) {
 }
 
 # =========================================================
-# AVALIAÇÃO (MESMA METODOLOGIA DO AE + CUSUM)
+# AVALIAÇÃO (DRIFT)
 # =========================================================
 
-# Expande rótulos (janela de tolerância)
+# Expande rótulos para janela de tolerância
 label_drift <- rep(0, n)
 event_idx <- which(labels == 1)
 
@@ -103,38 +115,30 @@ ref_vec  <- factor(label_drift[valid_idx], levels = c(0,1))
 
 cm <- confusionMatrix(pred_vec, ref_vec, positive = "1")
 
-# =========================================================
-# MÉTRICAS DE DESEMPENHO
-# =========================================================
+# -------------------------
+# MATRIZ DE CONFUSÃO (LEGÍVEL)
+# -------------------------
+TN <- cm$table["0","0"]
+FP <- cm$table["1","0"]
+FN <- cm$table["0","1"]
+TP <- cm$table["1","1"]
 
 cat("\n================ MATRIZ DE CONFUSÃO ================\n")
-print(cm$table)
+cat("Verdadeiro Negativo (TN):", TN, "\n")
+cat("Falso Positivo      (FP):", FP, "\n")
+cat("Falso Negativo      (FN):", FN, "\n")
+cat("Verdadeiro Positivo (TP):", TP, "\n")
 
-TN <- cm$table[1,1]
-FP <- cm$table[2,1]
-FN <- cm$table[1,2]
-TP <- cm$table[2,2]
+cat("\n================ MÉTRICAS ==========================\n")
+cat("Precisão :", round(cm$byClass["Precision"], 4), "\n")
+cat("Recall   :", round(cm$byClass["Sensitivity"], 4), "\n")
+cat("F1-score :", round(cm$byClass["F1"], 4), "\n")
 
-cat("\n================ CONTAGEM DOS CASOS ================\n")
-cat("TP (Verdadeiro Positivo):", TP, "\n")
-cat("FP (Falso Positivo):     ", FP, "\n")
-cat("FN (Falso Negativo):     ", FN, "\n")
-cat("TN (Verdadeiro Negativo):", TN, "\n")
-
-cat("\n================ MÉTRICAS ================\n")
-cat("Precisão (Precision): ", round(cm$byClass["Precision"], 4), "\n")
-cat("Recall (Sensitivity): ", round(cm$byClass["Sensitivity"], 4), "\n")
-cat("F1-score:             ", round(cm$byClass["F1"], 4), "\n")
-
-cat("\n================ DETECÇÃO ================\n")
-cat(
-  "Primeiro drift detectado em t =",
-  ifelse(length(drift_indices) > 0, drift_indices[1], "Nenhum"),
-  "\n"
-)
+cat("\nPrimeiro drift detectado em t =",
+    ifelse(length(drift_indices) > 0, drift_indices[1], "Nenhum"), "\n")
 
 # =========================================================
-# PREPARAÇÃO PARA GRÁFICOS
+# PREPARAÇÃO DOS DADOS PARA GRÁFICOS
 # =========================================================
 
 df_plot <- data.frame(
@@ -145,11 +149,14 @@ df_plot <- data.frame(
   Real   = labels
 )
 
+# Alarmes confirmados pelo GLR
 df_alarm <- df_plot[df_plot$Alarm == 1, ]
+
+# Eventos reais (ground truth)
 df_anom  <- df_plot[df_plot$Real == 1, ]
 
 # =========================================================
-# GRÁFICO 1 — SÉRIE + ALARMES GLR
+# GRÁFICO 1 — SÉRIE TEMPORAL + GLR
 # =========================================================
 
 g1 <- ggplot(df_plot, aes(x = Index)) +
@@ -178,8 +185,8 @@ g1 <- ggplot(df_plot, aes(x = Index)) +
   ) +
 
   labs(
-    title = "Série temporal com alarmes do GLR clássico",
-    y = "Pressão",
+    title = paste("Série:", series_name, "- Alarmes GLR"),
+    y = "Valor",
     x = "Índice"
   ) +
 
@@ -196,20 +203,12 @@ g2 <- ggplot(df_plot, aes(x = Index, y = GLR)) +
   geom_hline(
     yintercept = GLR_THRESHOLD,
     linetype = "dashed",
-    color = "gray40"
-  ) +
-
-  geom_point(
-    data = df_alarm,
-    aes(y = GLR),
-    color = "darkgreen",
-    shape = 17,
-    size = 3
+    color = "red"
   ) +
 
   labs(
-    title = "Estatística GLR ao longo do tempo",
-    y = "GLR",
+    title = "Estatística GLR",
+    y = "GLR Score",
     x = "Índice"
   ) +
 
@@ -218,7 +217,7 @@ g2 <- ggplot(df_plot, aes(x = Index, y = GLR)) +
 grid.arrange(g1, g2, ncol = 1, heights = c(1.2, 1))
 
 # =========================================================
-# AVALIAÇÃO (Delay) — GLR
+# 7. AVALIAÇÃO DE DELAY (ATRASO)
 # =========================================================
 
 delay_glr <- sapply(event_idx, function(e) {
@@ -226,25 +225,40 @@ delay_glr <- sapply(event_idx, function(e) {
   ifelse(is.na(det), NA, det - e)
 })
 
-cat("\n================ DELAY GLR ================\n")
-print(summary(delay_glr))
+stats_delay <- summary(delay_glr)
 
-cat("Eventos reais:        ", length(event_idx), "\n")
-cat("Eventos detectados:   ", sum(!is.na(delay_glr)), "\n")
-cat("Eventos não detectados:", sum(is.na(delay_glr)), "\n")
+cat("\n================ DELAY (ATRASO) ====================\n")
+if(all(is.na(delay_glr))) {
+  cat("Nenhum evento detectado para calcular delay.\n")
+} else {
+  # Verifica se existe o valor no summary antes de imprimir para evitar erro
+  get_stat <- function(s, name) ifelse(name %in% names(s), as.numeric(s[name]), NA)
+
+  cat("Mínimo   :", get_stat(stats_delay, "Min."), "\n")
+  cat("Mediana  :", get_stat(stats_delay, "Median"), "\n")
+  cat("Média    :", round(get_stat(stats_delay, "Mean"), 2), "\n")
+  cat("Máximo   :", get_stat(stats_delay, "Max."), "\n")
+}
+
+cat("\n----------------------------------------------------\n")
+cat("Eventos reais totais   :", length(event_idx), "\n")
+cat("Eventos detectados     :", sum(!is.na(delay_glr)), "\n")
+cat("Eventos não detectados :", sum(is.na(delay_glr)), "\n")
+
 
 # =========================================================
-# Precision / Recall com tolerância — GLR
+# 8. AVALIAÇÃO COM TOLERÂNCIA (+/- 250)
 # =========================================================
 
-TOL <- 250 
+TOL <- 250
 
 pred_tol_glr <- rep(0, n)
+# Preenche "1" ao redor das detecções do GLR com a margem de tolerância
 for (d in drift_indices) {
   pred_tol_glr[max(1, d - TOL):min(n, d + TOL)] <- 1
 }
 
-ref_tol_glr <- label_drift
+ref_tol_glr <- label_drift # Usa a referência padrão definida acima
 
 cm_tol_glr <- confusionMatrix(
   factor(pred_tol_glr, levels = c(0,1)),
@@ -252,10 +266,19 @@ cm_tol_glr <- confusionMatrix(
   positive = "1"
 )
 
-cat("\n================ MATRIZ DE CONFUSÃO (GLR + TOL) ================\n")
-print(cm_tol_glr$table)
+TN_tol <- cm_tol_glr$table["0","0"]
+FP_tol <- cm_tol_glr$table["1","0"]
+FN_tol <- cm_tol_glr$table["0","1"]
+TP_tol <- cm_tol_glr$table["1","1"]
 
-cat("\n================ MÉTRICAS (GLR + TOL) ================\n")
-print(cm_tol_glr$byClass)
+cat("\n================ MATRIZ (COM TOLERÂNCIA +/- 250) ===\n")
+cat("Verdadeiro Negativo (TN):", TN_tol, "\n")
+cat("Falso Positivo      (FP):", FP_tol, "\n")
+cat("Falso Negativo      (FN):", FN_tol, "\n")
+cat("Verdadeiro Positivo (TP):", TP_tol, "\n")
 
-
+cat("\n================ MÉTRICAS (COM TOLERÂNCIA) =========\n")
+cat("Precisão :", round(cm_tol_glr$byClass["Precision"], 4), "\n")
+cat("Recall   :", round(cm_tol_glr$byClass["Sensitivity"], 4), "\n")
+cat("F1-score :", round(cm_tol_glr$byClass["F1"], 4), "\n")
+cat("====================================================\n")
