@@ -1,59 +1,11 @@
-# =========================================================
-# AJUSTE DE TUNINGS
-# =========================================================
-
-# -------------------------
-# Tuning 1 (Conservador)
-# -------------------------
-tuning_1 <- list(
-  WINDOW_SIZE = 10,
-  LATENT_SIZE = 3,
-  EPOCHS_INIT = 30,
-  EPOCHS_RET  = 15,
-  K_FACTOR    = 0.25,
-  H_LOW       = 3,
-  H_HIGH      = 5,
-  PROB_TAU    = 0.995
-)
-
-# -------------------------
-# Tuning 2 (Mais Sensível)
-# -------------------------
-tuning_2 <- list(
-  WINDOW_SIZE = 8,
-  LATENT_SIZE = 2,
-  EPOCHS_INIT = 25,
-  EPOCHS_RET  = 10,
-  K_FACTOR    = 0.15,
-  H_LOW       = 2.5,
-  H_HIGH      = 4,
-  PROB_TAU    = 0.99
-)
-
-# -------------------------
-# Tuning 3 (Mais Estável)
-# -------------------------
-tuning_3 <- list(
-  WINDOW_SIZE = 12,
-  LATENT_SIZE = 4,
-  EPOCHS_INIT = 40,
-  EPOCHS_RET  = 20,
-  K_FACTOR    = 0.35,
-  H_LOW       = 3.5,
-  H_HIGH      = 6,
-  PROB_TAU    = 0.997
-)
-
-# Escolha do tuning
-TuningEscolhido <- 1
-TUNINGS <- list(tuning_1, tuning_2, tuning_3)
-params <- TUNINGS[[TuningEscolhido]]
+#Limpando sessão Rstudio
+rm(list = ls())
+gc()
 
 # =========================================================
 # BIBLIOTECAS
 # =========================================================
 
-library(daltoolbox)
 library(ggplot2)
 library(gridExtra)
 library(caret)
@@ -63,40 +15,24 @@ library(dplyr)
 # FUNÇÕES AUXILIARES
 # =========================================================
 
-ts_data_window <- function(data, sw) {
-  n <- length(data)
-  if (n < sw) return(NULL)
-  mat <- matrix(NA, nrow = n - sw + 1, ncol = sw)
-  for (i in 1:nrow(mat)) {
-    mat[i, ] <- data[i:(i + sw - 1)]
+glr_statistic <- function(x) {
+  N <- length(x)
+  best <- 0
+
+  for (k in 15:(N - 15)) {
+    x1 <- x[1:k]
+    x2 <- x[(k + 1):N]
+
+    mu1 <- mean(x1)
+    mu2 <- mean(x2)
+    s2  <- var(x)
+
+    if (s2 > 0) {
+      stat <- k * (N - k) / N * (mu1 - mu2)^2 / s2
+      best <- max(best, stat)
+    }
   }
-  as.data.frame(mat)
-}
-
-ts_norm_gminmax <- function() {
-  structure(list(min = NULL, max = NULL), class = "ts_norm_gminmax")
-}
-
-fit.ts_norm_gminmax <- function(obj, data) {
-  m <- as.matrix(data)
-  obj$min <- min(m, na.rm = TRUE)
-  obj$max <- max(m, na.rm = TRUE)
-  obj
-}
-
-transform.ts_norm_gminmax <- function(obj, data) {
-  m <- as.matrix(data)
-  as.data.frame((m - obj$min) / (obj$max - obj$min + 1e-8))
-}
-
-cusum_cross_tc_step <- function(x, k, h_low, h_high, pos, neg) {
-  pos <- max(0, pos + x - k)
-  neg <- min(0, neg + x + k)
-
-  warning <- (pos > h_low) | (neg < -h_low)
-  drift   <- (pos > h_high) | (neg < -h_high)
-
-  list(pos = pos, neg = neg, warning = warning, drift = drift)
+  best
 }
 
 # =========================================================
@@ -104,106 +40,59 @@ cusum_cross_tc_step <- function(x, k, h_low, h_high, pos, neg) {
 # =========================================================
 
 data(oil_3w_Type_1)
-df <- oil_3w_Type_1[[1]]
 
-series <- df$p_tpt
-labels <- df$event
-labels[is.na(labels)] <- 0
+# Escolha do Poço
+#df <- oil_3w_Type_1[["WELL-00001_20140124213136"]]
+df <- oil_3w_Type_1[["WELL-00002_20140126200050"]]
+
+# Lista de sensores disponíveis
+sensor_list <- c("p_pdg", "p_tpt", "t_tpt", "p_mon_ckp", "t_jus_ckp", "p_jus_ckgl", "qgl")
+
+# ---------------------------------------------------------
+# SELECIONE O SENSOR AQUI (1 a 7)
+# 1: p_pdg      (Pressão Fundo)
+# 2: p_tpt      (Pressão Cabeça)
+# 3: t_tpt      (Temp. Cabeça)
+# 4: p_mon_ckp  (Pressão Montante Choke)
+# 5: t_jus_ckp  (Temp. Jusante Choke)
+# 6: p_jus_ckgl (Pressão Jusante GL)
+# 7: qgl        (Vazão Gas Lift)
+# ---------------------------------------------------------
+i_sensor <- 1
+
+series_name <- sensor_list[i_sensor]
+series <- df[[series_name]]
+
+labels <- as.integer(df$event)
 n <- length(series)
 
 # =========================================================
 # HIPERPARÂMETROS FIXOS
 # =========================================================
 
-WARMUP       <- 500
-RETRAIN_SIZE <- 300
-
-# =========================================================
-# TREINAMENTO INICIAL
-# =========================================================
-
-train_data <- series[1:WARMUP]
-ts_train   <- ts_data_window(train_data, params$WINDOW_SIZE)
-
-norm_model <- fit(ts_norm_gminmax(), ts_train)
-ts_train_n <- transform(norm_model, ts_train)
-
-ae_model <- autoenc_ed(params$WINDOW_SIZE, params$LATENT_SIZE)
-ae_model <- fit(ae_model, ts_train_n, epochs = params$EPOCHS_INIT)
-
-rec_train <- transform(ae_model, ts_train_n)
-mse_train <- rowMeans((as.matrix(ts_train_n) - as.matrix(rec_train))^2)
-
-tau <- quantile(mse_train, probs = params$PROB_TAU)
+WARMUP        <- 500
+GLR_WINDOW    <- 60
+GLR_THRESHOLD <- 8
+MIN_SEG       <- 15
 
 # =========================================================
 # MONITORAMENTO
 # =========================================================
 
-results_mse   <- rep(NA, n)
-results_tau   <- rep(NA, n)
+results_glr   <- rep(NA, n)
 results_drift <- rep(0, n)
 drift_indices <- c()
 
-pos <- 0
-neg <- 0
-last_retrain <- WARMUP
+for (t in (WARMUP + GLR_WINDOW):n) {
 
-for (t in (WARMUP + 1):n) {
+  win <- series[(t - GLR_WINDOW + 1):t]
+  glr_val <- glr_statistic(win)
 
-  win <- series[(t - params$WINDOW_SIZE + 1):t]
-  win_df <- as.data.frame(t(win))
-  win_n  <- transform(norm_model, win_df)
+  results_glr[t] <- glr_val
 
-  rec <- transform(ae_model, win_n)
-  mse_t <- mean((as.matrix(win_n) - as.matrix(rec))^2)
-
-  results_mse[t] <- mse_t
-  results_tau[t] <- tau
-
-  if (t > last_retrain + 50) {
-
-    buffer <- na.omit(results_mse[(t-100):(t-1)])
-
-    if (length(buffer) > 20 && sd(buffer) > 0) {
-
-      z <- (mse_t - mean(buffer)) / (sd(buffer) + 1e-5)
-
-      cs <- cusum_cross_tc_step(
-        z,
-        params$K_FACTOR,
-        params$H_LOW,
-        params$H_HIGH,
-        pos,
-        neg
-      )
-
-      pos <- cs$pos
-      neg <- cs$neg
-
-      if (cs$drift && (t - last_retrain > RETRAIN_SIZE)) {
-
-        results_drift[t] <- 1
-        drift_indices <- c(drift_indices, t)
-
-        new_data <- series[(t - RETRAIN_SIZE + 1):t]
-        ts_new   <- ts_data_window(new_data, params$WINDOW_SIZE)
-
-        norm_model <- fit(ts_norm_gminmax(), ts_new)
-        ts_new_n   <- transform(norm_model, ts_new)
-
-        ae_model <- fit(ae_model, ts_new_n, epochs = params$EPOCHS_RET)
-
-        rec_new <- transform(ae_model, ts_new_n)
-        mse_new <- rowMeans((as.matrix(ts_new_n) - as.matrix(rec_new))^2)
-
-        tau <- quantile(mse_new, probs = params$PROB_TAU)
-
-        pos <- 0
-        neg <- 0
-        last_retrain <- t
-      }
-    }
+  if (!is.na(glr_val) && glr_val > GLR_THRESHOLD) {
+    results_drift[t] <- 1
+    drift_indices <- c(drift_indices, t)
   }
 }
 
@@ -219,57 +108,55 @@ for (i in event_idx) {
   label_drift[max(1, i-25):min(n, i+25)] <- 1
 }
 
-valid_idx <- which(!is.na(results_mse))
+valid_idx <- which(!is.na(results_glr))
 
 pred_vec <- factor(results_drift[valid_idx], levels = c(0,1))
 ref_vec  <- factor(label_drift[valid_idx], levels = c(0,1))
 
 cm <- confusionMatrix(pred_vec, ref_vec, positive = "1")
-print(cm$table)
 
-cat("\nPrecisão:", cm$byClass["Precision"])
-cat("\nRecall:", cm$byClass["Sensitivity"])
-cat("\nF1:", cm$byClass["F1"])
-cat("\nDrift detectado em t =", ifelse(length(drift_indices)>0, drift_indices[1], "Nenhum"))
+# -------------------------
+# MATRIZ DE CONFUSÃO (LEGÍVEL)
+# -------------------------
+TN <- cm$table["0","0"]
+FP <- cm$table["1","0"]
+FN <- cm$table["0","1"]
+TP <- cm$table["1","1"]
 
+cat("\n================ MATRIZ DE CONFUSÃO ================\n")
+cat("Verdadeiro Negativo (TN):", TN, "\n")
+cat("Falso Positivo      (FP):", FP, "\n")
+cat("Falso Negativo      (FN):", FN, "\n")
+cat("Verdadeiro Positivo (TP):", TP, "\n")
 
+cat("\n================ MÉTRICAS ==========================\n")
+cat("Precisão :", round(cm$byClass["Precision"], 4), "\n")
+cat("Recall   :", round(cm$byClass["Sensitivity"], 4), "\n")
+cat("F1-score :", round(cm$byClass["F1"], 4), "\n")
 
-
+cat("\nPrimeiro drift detectado em t =",
+    ifelse(length(drift_indices) > 0, drift_indices[1], "Nenhum"), "\n")
 
 # =========================================================
 # PREPARAÇÃO DOS DADOS PARA GRÁFICOS
 # =========================================================
 
-# Erro normalizado (Z-score usado no CUSUM)
-error_norm <- rep(NA, n)
-
-for (t in 1:n) {
-  if (t > 150 && !is.na(results_mse[t])) {
-    buf <- na.omit(results_mse[(t-100):(t-1)])
-    if (length(buf) > 20 && sd(buf) > 0) {
-      error_norm[t] <- (results_mse[t] - mean(buf)) / (sd(buf) + 1e-5)
-    }
-  }
-}
-
 df_plot <- data.frame(
-  Index     = 1:n,
-  Series    = series,
-  ErrorNorm = error_norm,
-  Alarm     = results_drift,
-  Real      = labels
+  Index  = 1:n,
+  Series = series,
+  GLR    = results_glr,
+  Alarm  = results_drift,
+  Real   = labels
 )
 
-# Alarmes confirmados pelo CUSUM (h_high)
+# Alarmes confirmados pelo GLR
 df_alarm <- df_plot[df_plot$Alarm == 1, ]
 
 # Eventos reais (ground truth)
-df_anom <- df_plot[df_plot$Real == 1, ]
-
-
+df_anom  <- df_plot[df_plot$Real == 1, ]
 
 # =========================================================
-# GRÁFICO 1 — SÉRIE TEMPORAL + CUSUM
+# GRÁFICO 1 — SÉRIE TEMPORAL + GLR
 # =========================================================
 
 g1 <- ggplot(df_plot, aes(x = Index)) +
@@ -277,7 +164,7 @@ g1 <- ggplot(df_plot, aes(x = Index)) +
 
   geom_point(
     data = df_alarm,
-    aes(y = Series, color = "Alarme CUSUM"),
+    aes(y = Series, color = "Alarme GLR"),
     shape = 17,
     size = 3
   ) +
@@ -292,53 +179,39 @@ g1 <- ggplot(df_plot, aes(x = Index)) +
   scale_color_manual(
     name = "Legenda",
     values = c(
-      "Alarme CUSUM"  = "blue",
+      "Alarme GLR"    = "darkgreen",
       "Anomalia Real" = "black"
     )
   ) +
 
   labs(
-    title = "Série temporal com alarmes do CUSUM sobre o erro do Autoencoder",
-    y = "Pressão",
+    title = paste("Série:", series_name, "- Alarmes GLR"),
+    y = "Valor",
     x = "Índice"
   ) +
 
   theme_minimal() +
   theme(legend.position = "bottom")
 
-
-
 # =========================================================
-# GRÁFICO 2 — ERRO NORMALIZADO (CUSUM)
+# GRÁFICO 2 — ESTATÍSTICA GLR
 # =========================================================
 
-g2 <- ggplot(df_plot, aes(x = Index, y = ErrorNorm)) +
-  geom_line(color = "red") +
+g2 <- ggplot(df_plot, aes(x = Index, y = GLR)) +
+  geom_line(color = "darkgreen") +
 
   geom_hline(
-    yintercept = c(3, -3),
+    yintercept = GLR_THRESHOLD,
     linetype = "dashed",
-    color = "gray40"
+    color = "red"
   ) +
-
-  geom_point(
-    data = df_alarm,
-    aes(y = ErrorNorm),
-    color = "blue",
-    shape = 17,
-    size = 3
-  ) +
-
-  coord_cartesian(ylim = c(-5, 5)) +
 
   labs(
-    title = "Erro de reconstrução normalizado utilizado pelo CUSUM",
-    y = "Erro normalizado",
+    title = "Estatística GLR",
+    y = "GLR Score",
     x = "Índice"
   ) +
 
   theme_minimal()
 
-
 grid.arrange(g1, g2, ncol = 1, heights = c(1.2, 1))
-
